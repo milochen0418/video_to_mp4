@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "reflex-video-converter"
+version = "0.1.0"
+description = ""
+authors = ["milochen0418 <milo_chen@mail2000.com.tw>"]
+readme = "plan.md"
+packages = [{ include = "reflex_video_converter" }]
+
+[tool.poetry.dependencies]
+python = "==3.11.*"
+reflex = "0.8.24.post1"
+ffmpeg-python = "*"
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"
