@@ -221,7 +221,8 @@ class AppState(rx.State):
 
 def run_ffmpeg(stream, output_path, crf, preset):
     """Helper to run ffmpeg synchronously."""
+    output_file = str(output_path)
     stream = ffmpeg.output(
-        stream, output_path, vcodec="libx264", crf=crf, preset=preset, acodec="aac"
+        stream, output_file, vcodec="libx264", crf=crf, preset=preset, acodec="aac"
     )
     stream.run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
