@@ -8,6 +8,7 @@ from pathlib import Path
 import ffmpeg
 import logging
 import shutil
+import re
 
 
 class FileJob(TypedDict):
@@ -15,7 +16,7 @@ class FileJob(TypedDict):
     filename: str
     size_str: str
     status: str
-    progress: int
+    progress: float
     uploaded_at: str
     resolution: str
     quality: str
@@ -36,6 +37,13 @@ class AppState(rx.State):
     quality_options: list[str] = ["Standard", "High", "Maximum"]
     allowed_extensions: list[str] = ["avi", "mov", "mkv", "wmv", "mp4", "webm"]
     recent_jobs: list[FileJob] = []
+
+    async def _update_job_progress(self, job_id: str, progress: float):
+        async with self:
+            for idx, job in enumerate(self.recent_jobs):
+                if job["id"] == job_id:
+                    self.recent_jobs[idx]["progress"] = round(progress, 2)
+                    break
 
     @rx.event
     def set_resolution(self, resolution: str):
@@ -64,7 +72,7 @@ class AppState(rx.State):
         for job in self.recent_jobs:
             if job["id"] == job_id:
                 job["status"] = "Queued"
-                job["progress"] = 0
+                job["progress"] = 0.0
                 job["error_message"] = None
                 yield AppState.process_job(job_id)
                 break
@@ -128,7 +136,7 @@ class AppState(rx.State):
                     "filename": unique_filename,
                     "size_str": self._format_size(file_size),
                     "status": "Queued",
-                    "progress": 0,
+                    "progress": 0.0,
                     "uploaded_at": datetime.datetime.now().strftime("%H:%M"),
                     "resolution": self.selected_resolution,
                     "quality": self.selected_quality,
@@ -169,7 +177,7 @@ class AppState(rx.State):
                 return
             job = self.recent_jobs[job_idx]
             self.recent_jobs[job_idx]["status"] = "Processing"
-            self.recent_jobs[job_idx]["progress"] = 5
+            self.recent_jobs[job_idx]["progress"] = 5.0
             input_filename = job["filename"]
             resolution_mode = job["resolution"]
             quality_mode = job["quality"]
@@ -180,6 +188,7 @@ class AppState(rx.State):
         try:
             if not input_path.exists():
                 raise FileNotFoundError(f"Input file {input_filename} not found")
+            duration_seconds = get_media_duration(input_path)
             stream = ffmpeg.input(input_path)
             if resolution_mode == "1080p":
                 stream = stream.filter("scale", -1, 1080)
@@ -199,14 +208,29 @@ class AppState(rx.State):
                 crf = 28
                 preset = "fast"
             async with self:
-                self.recent_jobs[job_idx]["progress"] = 10
-            await asyncio.to_thread(run_ffmpeg, stream, output_path, crf, preset)
+                self.recent_jobs[job_idx]["progress"] = 10.0
+            loop = asyncio.get_running_loop()
+            progress_callback = None
+            if duration_seconds and duration_seconds > 0:
+                def progress_callback(pct: float):
+                    asyncio.run_coroutine_threadsafe(
+                        self._update_job_progress(job_id, pct), loop
+                    )
+            await asyncio.to_thread(
+                run_ffmpeg,
+                stream,
+                output_path,
+                crf,
+                preset,
+                duration_seconds,
+                progress_callback,
+            )
             if not output_path.exists():
                 raise Exception("Conversion failed: Output file not created")
             converted_size = output_path.stat().st_size
             async with self:
                 self.recent_jobs[job_idx]["status"] = "Complete"
-                self.recent_jobs[job_idx]["progress"] = 100
+                self.recent_jobs[job_idx]["progress"] = 100.0
                 self.recent_jobs[job_idx]["converted_filename"] = output_filename
                 self.recent_jobs[job_idx]["converted_size_str"] = self._format_size(
                     converted_size
@@ -219,10 +243,57 @@ class AppState(rx.State):
                 self.recent_jobs[job_idx]["error_message"] = str(e)
 
 
-def run_ffmpeg(stream, output_path, crf, preset):
-    """Helper to run ffmpeg synchronously."""
+_TIME_RE = re.compile(r"time=(\d+):(\d+):(\d+(?:\.\d+)?)")
+_OUT_TIME_MS_RE = re.compile(r"out_time_ms=(\d+)")
+
+
+def _parse_ffmpeg_time(line: str) -> Optional[float]:
+    match = _TIME_RE.search(line)
+    if not match:
+        return None
+    hours, minutes, seconds = match.groups()
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+
+def get_media_duration(path: Path) -> Optional[float]:
+    try:
+        probe = ffmpeg.probe(str(path))
+        if "format" in probe and "duration" in probe["format"]:
+            return float(probe["format"]["duration"])
+        for stream in probe.get("streams", []):
+            if "duration" in stream:
+                return float(stream["duration"])
+    except Exception:
+        return None
+    return None
+
+
+def run_ffmpeg(stream, output_path, crf, preset, duration_seconds, progress_callback):
+    """Helper to run ffmpeg synchronously with optional progress callback."""
     output_file = str(output_path)
     stream = ffmpeg.output(
         stream, output_file, vcodec="libx264", crf=crf, preset=preset, acodec="aac"
     )
-    stream.run(overwrite_output=True, capture_stdout=True, capture_stderr=True)
+    if duration_seconds and progress_callback:
+        stream = stream.global_args("-progress", "pipe:1", "-nostats")
+        process = stream.run_async(pipe_stdout=True, pipe_stderr=True, overwrite_output=True)
+        last_percent = 0.0
+        while True:
+            line = process.stdout.readline()
+            if not line:
+                if process.poll() is not None:
+                    break
+                continue
+            text = line.decode("utf-8", errors="ignore").strip()
+            match = _OUT_TIME_MS_RE.match(text)
+            if not match:
+                continue
+            out_time_ms = int(match.group(1))
+            elapsed = out_time_ms / 1_000_000
+            percent = min(99.99, max(0.0, (elapsed / duration_seconds) * 100))
+            if percent - last_percent >= 0.01:
+                last_percent = percent
+                progress_callback(percent)
+        process.wait()
+    else:
+        stream.run(overwrite_output=True, capture_stdout=True, capture_stderr=True)

@@ -89,6 +89,10 @@ def job_row(job: FileJob) -> rx.Component:
                 ),
                 class_name="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden",
             ),
+            rx.el.span(
+                f"{job['progress']:.2f}%",
+                class_name="text-xs text-gray-500 mt-1 block",
+            ),
             class_name="px-4 py-4 whitespace-nowrap",
         ),
         rx.el.td(
