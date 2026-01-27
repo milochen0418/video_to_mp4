@@ -31,7 +31,7 @@ class AppState(rx.State):
     is_uploading: bool = False
     selected_resolution: str = "Original"
     selected_quality: str = "High"
-    resolution_options: list[str] = ["Original", "1080p", "720p", "480p"]
+    resolution_options: list[str] = ["Original", "4K", "1080p", "720p", "480p"]
     quality_options: list[str] = ["Standard", "High", "Maximum"]
     allowed_extensions: list[str] = ["avi", "mov", "mkv", "wmv", "mp4", "webm"]
     recent_jobs: list[FileJob] = []
@@ -166,7 +166,9 @@ class AppState(rx.State):
                 raise FileNotFoundError(f"Input file {input_filename} not found")
             duration_seconds = get_media_duration(input_path)
             stream = ffmpeg.input(input_path)
-            if resolution_mode == "1080p":
+            if resolution_mode == "4K":
+                stream = stream.filter("scale", -1, 2160)
+            elif resolution_mode == "1080p":
                 stream = stream.filter("scale", -1, 1080)
             elif resolution_mode == "720p":
                 stream = stream.filter("scale", -1, 720)
