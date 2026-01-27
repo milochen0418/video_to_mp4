@@ -1,3 +1,3 @@
 import reflex as rx
 
-config = rx.Config(app_name="reflex_video_converter", plugins=[rx.plugins.TailwindV3Plugin()])
+config = rx.Config(app_name="video_to_mp4", plugins=[rx.plugins.TailwindV3Plugin()])

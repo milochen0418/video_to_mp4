@@ -1,5 +1,5 @@
 import reflex as rx
-from reflex_video_converter.states.app_state import AppState
+from video_to_mp4.states.app_state import AppState
 
 
 def settings_panel() -> rx.Component:

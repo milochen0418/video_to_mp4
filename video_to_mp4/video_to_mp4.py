@@ -1,6 +1,6 @@
 import reflex as rx
-from reflex_video_converter.components.upload_zone import upload_zone
-from reflex_video_converter.components.job_list import job_list
+from video_to_mp4.components.upload_zone import upload_zone
+from video_to_mp4.components.job_list import job_list
 
 
 def index() -> rx.Component:

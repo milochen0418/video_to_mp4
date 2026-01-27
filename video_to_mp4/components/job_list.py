@@ -1,5 +1,5 @@
 import reflex as rx
-from reflex_video_converter.states.app_state import AppState, FileJob
+from video_to_mp4.states.app_state import AppState, FileJob
 
 
 def status_badge(status: str) -> rx.Component:

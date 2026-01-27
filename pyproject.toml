@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["milochen0418 <milo_chen@mail2000.com.tw>"]
 readme = "plan.md"
-packages = [{ include = "reflex_video_converter" }]
+packages = [{ include = "video_to_mp4" }]
 
 [tool.poetry.dependencies]
 python = "==3.11.*"
