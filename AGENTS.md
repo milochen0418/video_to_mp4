@@ -7,13 +7,13 @@ This file describes how an AI coding agent (and humans) should work in this repo
 Before making changes or running commands, **read all README.md files in this repo** and follow them.
 
 - Repo overview & dev workflow: `README.md`
-- E2E test runner conventions: `testcases/README.md`
+- E2E test runner conventions: `testcases/README.md` (if present)
 
 If you already read them earlier in the session, **re-check** when unsure.
 
 ## 1) Python / Poetry requirements (strict)
 
-This project targets **Python 3.11**.
+This project targets **Python 3.11** (always set the Poetry env to 3.11 before installing deps or running commands).
 
 - Prefer Poetry-managed environments.
 - If Poetry selected another Python (e.g. 3.12+), switch it:

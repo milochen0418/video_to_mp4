@@ -38,7 +38,14 @@ brew install ffmpeg
 
 ### Installation
 
-1. Install dependencies:
+1. Ensure Poetry uses Python 3.11:
+
+```bash
+poetry env use python3.11
+poetry env info
+```
+
+2. Install dependencies:
 
 ```bash
 poetry install
