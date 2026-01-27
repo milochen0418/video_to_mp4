@@ -28,8 +28,6 @@ class FileJob(TypedDict):
 class AppState(rx.State):
     """The central state for the application."""
 
-    MAX_CAPACITY_GB: float = 100.0
-    used_capacity_gb: float = 0.0
     is_uploading: bool = False
     selected_resolution: str = "Original"
     selected_quality: str = "High"
@@ -78,23 +76,6 @@ class AppState(rx.State):
                 break
         yield rx.toast.info("Job requeued for processing.")
 
-    @rx.var
-    def remaining_capacity_gb(self) -> float:
-        return self.MAX_CAPACITY_GB - self.used_capacity_gb
-
-    @rx.var
-    def usage_percentage(self) -> float:
-        return self.used_capacity_gb / self.MAX_CAPACITY_GB * 100
-
-    @rx.var
-    def usage_color(self) -> str:
-        pct = self.usage_percentage
-        if pct > 90:
-            return "bg-red-500"
-        if pct > 75:
-            return "bg-amber-500"
-        return "bg-indigo-600"
-
     def _format_size(self, size_bytes: int) -> str:
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if size_bytes < 1024.0:
@@ -123,13 +104,8 @@ class AppState(rx.State):
                 unique_filename = f"{base_name}_{random.randint(1000, 9999)}{ext}"
                 file_path = upload_dir / unique_filename
                 file_size = len(upload_data)
-                file_size_gb = file_size / (1024 * 1024 * 1024)
-                if self.used_capacity_gb + file_size_gb > self.MAX_CAPACITY_GB:
-                    errors.append(f"{filename}: Not enough capacity.")
-                    continue
                 with open(file_path, "wb") as f:
                     f.write(upload_data)
-                self.used_capacity_gb += file_size_gb
                 job_id = f"job_{random.randint(10000, 99999)}"
                 new_job: FileJob = {
                     "id": job_id,
@@ -235,7 +211,6 @@ class AppState(rx.State):
                 self.recent_jobs[job_idx]["converted_size_str"] = self._format_size(
                     converted_size
                 )
-                self.used_capacity_gb += converted_size / (1024 * 1024 * 1024)
         except Exception as e:
             logging.exception(f"Conversion error for job {job_id}")
             async with self:

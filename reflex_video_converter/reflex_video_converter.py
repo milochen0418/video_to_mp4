@@ -1,7 +1,6 @@
 import reflex as rx
 from reflex_video_converter.components.sidebar import sidebar
 from reflex_video_converter.components.upload_zone import upload_zone
-from reflex_video_converter.components.capacity_indicator import capacity_card
 from reflex_video_converter.components.job_list import job_list
 
 
@@ -49,7 +48,6 @@ def index() -> rx.Component:
                         class_name="lg:col-span-2 flex flex-col",
                     ),
                     rx.el.div(
-                        capacity_card(),
                         rx.el.div(
                             rx.el.h3(
                                 "Quick Tips",
