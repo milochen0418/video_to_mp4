@@ -87,13 +87,13 @@ def job_row(job: FileJob) -> rx.Component:
                     class_name="h-1.5 rounded-full bg-indigo-600 transition-all duration-500",
                     style={"width": f"{job['progress']}%"},
                 ),
-                class_name="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden",
+                class_name="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden",
             ),
             rx.el.span(
                 f"{job['progress']:.2f}%",
                 class_name="text-xs text-gray-500 mt-1 block",
             ),
-            class_name="px-4 py-4 whitespace-nowrap",
+            class_name="px-4 py-4",
         ),
         rx.el.td(
             job["uploaded_at"],
@@ -179,7 +179,7 @@ def job_list() -> rx.Component:
                         ),
                         rx.el.th(
                             "Progress",
-                            class_name="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider",
+                            class_name="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider w-full",
                         ),
                         rx.el.th(
                             "Uploaded",
