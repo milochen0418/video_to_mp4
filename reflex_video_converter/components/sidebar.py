@@ -23,7 +23,7 @@ def sidebar() -> rx.Component:
                 class_name="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center shadow-lg",
             ),
             rx.el.h1(
-                "VidConvert",
+                "Video to MP4",
                 class_name="text-xl font-bold text-gray-900 tracking-tight",
             ),
             class_name="flex items-center gap-3 px-6 py-8",

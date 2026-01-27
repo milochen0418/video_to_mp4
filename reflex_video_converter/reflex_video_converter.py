@@ -14,7 +14,7 @@ def index() -> rx.Component:
                     rx.el.div(
                         rx.icon("video", class_name="w-6 h-6 text-indigo-600"),
                         rx.el.h1(
-                            "VidConvert",
+                            "Video to MP4",
                             class_name="text-lg font-bold text-gray-900 ml-2",
                         ),
                         class_name="flex items-center",

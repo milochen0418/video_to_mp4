@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "reflex-video-converter"
+name = "video-to-mp4"
 version = "0.1.0"
 description = ""
 authors = ["milochen0418 <milo_chen@mail2000.com.tw>"]

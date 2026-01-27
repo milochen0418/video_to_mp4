@@ -1,4 +1,4 @@
-# Video Conversion Service - Implementation Plan
+# Video to MP4 - Implementation Plan
 
 ## Phase 1: Core UI and Upload Infrastructure ✅
 - [x] Create responsive dashboard layout with header, sidebar navigation, and main content area
