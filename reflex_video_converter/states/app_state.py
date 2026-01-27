@@ -66,6 +66,11 @@ class AppState(rx.State):
             self.show_resolution_help = False
 
     @rx.event
+    def close_help(self):
+        self.show_resolution_help = False
+        self.show_quality_help = False
+
+    @rx.event
     def remove_job(self, job_id: str):
         job = next((j for j in self.recent_jobs if j["id"] == job_id), None)
         if job:

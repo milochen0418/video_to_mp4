@@ -4,6 +4,14 @@ from reflex_video_converter.states.app_state import AppState
 
 def settings_panel() -> rx.Component:
     return rx.el.div(
+        rx.cond(
+            AppState.show_resolution_help | AppState.show_quality_help,
+            rx.el.div(
+                on_click=AppState.close_help,
+                class_name="fixed inset-0 z-0",
+            ),
+            rx.el.span(),
+        ),
         rx.el.div(
             rx.el.div(
                 rx.el.label(
@@ -22,7 +30,7 @@ def settings_panel() -> rx.Component:
                         AppState.show_resolution_help,
                         rx.el.div(
                             "Resolution controls output dimensions. 'Original' keeps the source size; 4K/1080p/720p/480p scale the video.",
-                            class_name="absolute right-0 mt-2 w-64 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10",
+                            class_name="absolute right-0 mt-2 w-64 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-20",
                         ),
                         rx.el.span(),
                     ),
@@ -65,7 +73,7 @@ def settings_panel() -> rx.Component:
                         AppState.show_quality_help,
                         rx.el.div(
                             "Quality presets control compression: Standard (faster, smaller), High (balanced), Maximum (best quality, slowest).",
-                            class_name="absolute right-0 mt-2 w-64 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10",
+                            class_name="absolute right-0 mt-2 w-64 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-20",
                         ),
                         rx.el.span(),
                     ),
