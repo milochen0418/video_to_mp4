@@ -19,3 +19,37 @@ This is a web tool that converts various video formats to MP4. Users can upload 
 ## Project Purpose
 
 This project provides a simple and clear “videos to MP4” conversion experience with a visual flow that shows upload, confirmation, and conversion status.
+
+## Getting Started
+
+This project is managed with [Poetry](https://python-poetry.org/).
+
+### Prerequisites
+
+- Python 3.11.x
+- Poetry
+- FFmpeg
+
+Install FFmpeg (macOS):
+
+```bash
+brew install ffmpeg
+```
+
+### Installation
+
+1. Install dependencies:
+
+```bash
+poetry install
+```
+
+### Running the App
+
+Start the development server:
+
+```bash
+poetry run ./reflex_rerun.sh
+```
+
+The application will be available at `http://localhost:3000`.
