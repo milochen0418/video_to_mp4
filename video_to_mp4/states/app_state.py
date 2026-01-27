@@ -22,7 +22,7 @@ class FileJob(TypedDict):
     uploaded_at: str
     resolution: str
     quality: str
-    converted_filename: Optional[str]
+    converted_filename: str
     converted_size_str: Optional[str]
     error_message: Optional[str]
 
@@ -154,7 +154,7 @@ class AppState(rx.State):
                 "uploaded_at": datetime.datetime.now().strftime("%H:%M"),
                 "resolution": self.selected_resolution,
                 "quality": self.selected_quality,
-                "converted_filename": None,
+                "converted_filename": "",
                 "converted_size_str": None,
                 "error_message": None,
             }
@@ -346,7 +346,7 @@ class AppState(rx.State):
                     "uploaded_at": datetime.datetime.now().strftime("%H:%M"),
                     "resolution": self.selected_resolution,
                     "quality": self.selected_quality,
-                    "converted_filename": None,
+                    "converted_filename": "",
                     "converted_size_str": None,
                     "error_message": None,
                 }

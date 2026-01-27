@@ -20,7 +20,7 @@ def settings_panel() -> rx.Component:
                 ),
                 rx.el.div(
                     rx.el.button(
-                        rx.icon("help-circle", class_name="w-4 h-4"),
+                        rx.icon("circle_help", class_name="w-4 h-4"),
                         on_click=AppState.toggle_resolution_help,
                         class_name="ml-2 text-gray-400 hover:text-gray-600 transition-colors",
                         aria_label="Resolution help",
@@ -63,7 +63,7 @@ def settings_panel() -> rx.Component:
                 ),
                 rx.el.div(
                     rx.el.button(
-                        rx.icon("help-circle", class_name="w-4 h-4"),
+                        rx.icon("circle_help", class_name="w-4 h-4"),
                         on_click=AppState.toggle_quality_help,
                         class_name="ml-2 text-gray-400 hover:text-gray-600 transition-colors",
                         aria_label="Quality preset help",
