@@ -2,6 +2,8 @@ import reflex as rx
 import random
 from typing import TypedDict, Optional
 import datetime
+import tempfile
+import base64
 import os
 import asyncio
 from pathlib import Path
@@ -31,6 +33,9 @@ class AppState(rx.State):
     is_uploading: bool = False
     show_resolution_help: bool = False
     show_quality_help: bool = False
+    show_confirm_dialog: bool = False
+    pending_files: list[str] = []
+    staged_files: list[dict] = []
     selected_resolution: str = "Original"
     selected_quality: str = "High"
     resolution_options: list[str] = ["Original", "4K", "1080p", "720p", "480p"]
@@ -71,6 +76,97 @@ class AppState(rx.State):
         self.show_quality_help = False
 
     @rx.event
+    async def open_confirm(self, files: list[rx.UploadFile]):
+        if not files:
+            yield rx.toast.error("Please select at least one file.")
+            return
+        upload_dir = rx.get_upload_dir()
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        self.pending_files = []
+        self.staged_files = []
+        errors = []
+        for file in files:
+            filename = "unknown"
+            try:
+                filename, upload_data = await self._read_upload_file(file)
+                base_name = Path(filename).stem
+                ext = Path(filename).suffix.lower()
+                if ext[1:] not in self.allowed_extensions:
+                    errors.append(f"{filename}: Invalid file type {ext}")
+                    continue
+                unique_filename = f"{base_name}_{random.randint(1000, 9999)}{ext}"
+                file_path = upload_dir / unique_filename
+                with open(file_path, "wb") as f:
+                    f.write(upload_data)
+                self.pending_files.append(filename)
+                self.staged_files.append(
+                    {
+                        "original_name": filename,
+                        "stored_name": unique_filename,
+                        "size": len(upload_data),
+                    }
+                )
+            except Exception as e:
+                logging.exception(f"Failed to stage {filename}: {str(e)}")
+                errors.append(f"Failed to stage {filename}: {str(e)}")
+        for err in errors:
+            yield rx.toast.error(err)
+        if not self.staged_files:
+            return
+        self.show_confirm_dialog = True
+
+    @rx.event
+    def close_confirm(self):
+        self.show_confirm_dialog = False
+        if self.staged_files:
+            upload_dir = rx.get_upload_dir()
+            for item in self.staged_files:
+                stored_name = item.get("stored_name")
+                if stored_name:
+                    (upload_dir / stored_name).unlink(missing_ok=True)
+        self.pending_files = []
+        self.staged_files = []
+
+    @rx.event
+    async def confirm_upload(self):
+        self.show_confirm_dialog = False
+        staged = list(self.staged_files)
+        self.pending_files = []
+        self.staged_files = []
+        if not staged:
+            yield rx.toast.error("No files to convert.")
+            return
+        uploaded_count = 0
+        jobs_to_process = []
+        for item in staged:
+            stored_name = item.get("stored_name")
+            original_name = item.get("original_name", stored_name)
+            size = item.get("size", 0)
+            if not stored_name:
+                continue
+            job_id = f"job_{random.randint(10000, 99999)}"
+            new_job: FileJob = {
+                "id": job_id,
+                "filename": stored_name,
+                "size_str": self._format_size(size),
+                "status": "Queued",
+                "progress": 0.0,
+                "uploaded_at": datetime.datetime.now().strftime("%H:%M"),
+                "resolution": self.selected_resolution,
+                "quality": self.selected_quality,
+                "converted_filename": None,
+                "converted_size_str": None,
+                "error_message": None,
+            }
+            self.recent_jobs.insert(0, new_job)
+            uploaded_count += 1
+            jobs_to_process.append(job_id)
+        if uploaded_count > 0:
+            yield rx.toast.success(f"Successfully uploaded {uploaded_count} file(s).")
+            for job_id in jobs_to_process:
+                yield AppState.process_job(job_id)
+
+    @rx.event
     def remove_job(self, job_id: str):
         job = next((j for j in self.recent_jobs if j["id"] == job_id), None)
         if job:
@@ -102,6 +198,113 @@ class AppState(rx.State):
             size_bytes /= 1024.0
         return f"{size_bytes:.1f} PB"
 
+    async def _read_upload_file(self, file) -> tuple[str, bytes]:
+        logging.error(
+            "Upload payload type: %s", type(file).__name__
+        )
+        if hasattr(file, "read"):
+            upload_data = await file.read()
+            filename = getattr(file, "name", "unknown")
+            return filename, upload_data
+        if isinstance(file, dict):
+            logging.error("Upload payload keys: %s", list(file.keys()))
+            logging.error("Upload payload headers: %s", file.get("headers"))
+            filename = (
+                file.get("name")
+                or file.get("filename")
+                or Path(file.get("path", "")).name
+                or "unknown"
+            )
+            logging.error("Derived filename: %s", filename)
+            if "file" in file:
+                inner_file = file["file"]
+                logging.error(
+                    "Inner file type: %s", type(inner_file).__name__
+                )
+                if hasattr(inner_file, "read"):
+                    upload_data = await inner_file.read()
+                    return filename, upload_data
+                if isinstance(inner_file, (bytes, bytearray)):
+                    return filename, bytes(inner_file)
+                if isinstance(inner_file, list):
+                    return filename, bytes(inner_file)
+                if isinstance(inner_file, str):
+                    inner_path = inner_file
+                    if inner_path:
+                        logging.error("Inner file string value: %s", inner_path)
+                        path = Path(inner_path)
+                        if not path.is_absolute():
+                            path = rx.get_upload_dir() / path
+                        if path.exists():
+                            return filename or path.name, path.read_bytes()
+                if isinstance(inner_file, dict):
+                    logging.error(
+                        "Inner file keys: %s", list(inner_file.keys())
+                    )
+                    inner_path = inner_file.get("path") or inner_file.get("file_path")
+                    if inner_path:
+                        logging.error("Inner file path: %s", inner_path)
+                        path = Path(inner_path)
+                        if not path.is_absolute():
+                            path = rx.get_upload_dir() / path
+                        if path.exists():
+                            return filename or path.name, path.read_bytes()
+                    inner_data = (
+                        inner_file.get("data")
+                        or inner_file.get("content")
+                        or inner_file.get("contents")
+                    )
+                    if isinstance(inner_data, list):
+                        return filename, bytes(inner_data)
+                    if isinstance(inner_data, str):
+                        try:
+                            return filename, base64.b64decode(inner_data)
+                        except Exception:
+                            return filename, inner_data.encode("utf-8")
+            upload_data = file.get("data") or file.get("content") or file.get("contents")
+            logging.error(
+                "Inline data type: %s", type(upload_data).__name__
+            )
+            if isinstance(upload_data, list):
+                upload_data = bytes(upload_data)
+            if isinstance(upload_data, str):
+                try:
+                    upload_data = base64.b64decode(upload_data)
+                except Exception:
+                    upload_data = upload_data.encode("utf-8")
+            if isinstance(upload_data, bytes):
+                return filename, upload_data
+            path_value = file.get("path") or file.get("file_path") or file.get("filepath")
+            if path_value:
+                logging.error("Payload path: %s", path_value)
+                path = Path(path_value)
+                candidate_paths = []
+                if path.is_absolute():
+                    candidate_paths.append(path)
+                else:
+                    candidate_paths.extend(
+                        [
+                            rx.get_upload_dir() / path,
+                            Path.cwd() / path,
+                            Path.cwd() / ".web" / path,
+                            Path.cwd() / ".web" / "public" / path,
+                            Path.cwd() / ".web" / "backend" / path,
+                            Path.cwd() / ".web" / "backend" / "uploaded_files" / path,
+                            Path(tempfile.gettempdir()) / path,
+                        ]
+                    )
+                logging.error(
+                    "Upload candidate paths: %s",
+                    [str(p) for p in candidate_paths],
+                )
+                for candidate in candidate_paths:
+                    if candidate.exists():
+                        return filename or candidate.name, candidate.read_bytes()
+            logging.error(
+                "Unsupported upload file payload keys: %s", list(file.keys())
+            )
+        raise ValueError("Unsupported upload file payload")
+
     @rx.event
     async def handle_upload(self, files: list[rx.UploadFile]):
         """Handle the file upload event."""
@@ -110,11 +313,19 @@ class AppState(rx.State):
         errors = []
         jobs_to_process = []
         upload_dir = rx.get_upload_dir()
+        logging.error("Upload dir: %s", upload_dir)
+        try:
+            logging.error(
+                "Upload dir contents: %s",
+                [p.name for p in upload_dir.iterdir()],
+            )
+        except Exception as e:
+            logging.error("Failed to list upload dir: %s", e)
         upload_dir.mkdir(parents=True, exist_ok=True)
         for file in files:
+            filename = "unknown"
             try:
-                upload_data = await file.read()
-                filename = file.name
+                filename, upload_data = await self._read_upload_file(file)
                 base_name = Path(filename).stem
                 ext = Path(filename).suffix.lower()
                 if ext[1:] not in self.allowed_extensions:
@@ -143,8 +354,8 @@ class AppState(rx.State):
                 uploaded_count += 1
                 jobs_to_process.append(job_id)
             except Exception as e:
-                logging.exception(f"Failed to upload {file.name}: {str(e)}")
-                errors.append(f"Failed to upload {file.name}: {str(e)}")
+                logging.exception(f"Failed to upload {filename}: {str(e)}")
+                errors.append(f"Failed to upload {filename}: {str(e)}")
         self.is_uploading = False
         if uploaded_count > 0:
             yield rx.toast.success(f"Successfully uploaded {uploaded_count} file(s).")
