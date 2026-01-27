@@ -29,6 +29,8 @@ class AppState(rx.State):
     """The central state for the application."""
 
     is_uploading: bool = False
+    show_resolution_help: bool = False
+    show_quality_help: bool = False
     selected_resolution: str = "Original"
     selected_quality: str = "High"
     resolution_options: list[str] = ["Original", "4K", "1080p", "720p", "480p"]
@@ -50,6 +52,18 @@ class AppState(rx.State):
     @rx.event
     def set_quality(self, quality: str):
         self.selected_quality = quality
+
+    @rx.event
+    def toggle_resolution_help(self):
+        self.show_resolution_help = not self.show_resolution_help
+        if self.show_resolution_help:
+            self.show_quality_help = False
+
+    @rx.event
+    def toggle_quality_help(self):
+        self.show_quality_help = not self.show_quality_help
+        if self.show_quality_help:
+            self.show_resolution_help = False
 
     @rx.event
     def remove_job(self, job_id: str):

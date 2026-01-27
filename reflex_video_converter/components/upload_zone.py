@@ -5,9 +5,30 @@ from reflex_video_converter.states.app_state import AppState
 def settings_panel() -> rx.Component:
     return rx.el.div(
         rx.el.div(
-            rx.el.label(
-                "Resolution",
-                class_name="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block",
+            rx.el.div(
+                rx.el.label(
+                    "Resolution",
+                    class_name="text-xs font-semibold text-gray-500 uppercase tracking-wider block",
+                ),
+                rx.el.div(
+                    rx.el.button(
+                        rx.icon("help-circle", class_name="w-4 h-4"),
+                        on_click=AppState.toggle_resolution_help,
+                        class_name="ml-2 text-gray-400 hover:text-gray-600 transition-colors",
+                        aria_label="Resolution help",
+                        type="button",
+                    ),
+                    rx.cond(
+                        AppState.show_resolution_help,
+                        rx.el.div(
+                            "Resolution controls output dimensions. 'Original' keeps the source size; 4K/1080p/720p/480p scale the video.",
+                            class_name="absolute right-0 mt-2 w-64 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10",
+                        ),
+                        rx.el.span(),
+                    ),
+                    class_name="relative",
+                ),
+                class_name="flex items-center mb-2",
             ),
             rx.el.div(
                 rx.foreach(
@@ -27,9 +48,30 @@ def settings_panel() -> rx.Component:
             class_name="mb-4",
         ),
         rx.el.div(
-            rx.el.label(
-                "Quality Preset",
-                class_name="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block",
+            rx.el.div(
+                rx.el.label(
+                    "Quality Preset",
+                    class_name="text-xs font-semibold text-gray-500 uppercase tracking-wider block",
+                ),
+                rx.el.div(
+                    rx.el.button(
+                        rx.icon("help-circle", class_name="w-4 h-4"),
+                        on_click=AppState.toggle_quality_help,
+                        class_name="ml-2 text-gray-400 hover:text-gray-600 transition-colors",
+                        aria_label="Quality preset help",
+                        type="button",
+                    ),
+                    rx.cond(
+                        AppState.show_quality_help,
+                        rx.el.div(
+                            "Quality presets control compression: Standard (faster, smaller), High (balanced), Maximum (best quality, slowest).",
+                            class_name="absolute right-0 mt-2 w-64 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-10",
+                        ),
+                        rx.el.span(),
+                    ),
+                    class_name="relative",
+                ),
+                class_name="flex items-center mb-2",
             ),
             rx.el.div(
                 rx.foreach(
