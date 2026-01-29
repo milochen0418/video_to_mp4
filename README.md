@@ -20,6 +20,10 @@ This is a web tool that converts various video formats to MP4. Users can upload 
 
 This project provides a simple and clear “videos to MP4” conversion experience with a visual flow that shows upload, confirmation, and conversion status.
 
+## Software Design Document (SDD)
+
+I have a document titled [Video to MP4 - Software Design Document (SDD).pdf](docs/Video%20to%20MP4%20-%20Software%20Design%20Document%20(SDD).pdf). Everyone is encouraged to join and open-source this project together.
+
 ## Getting Started
 
 This project is managed with [Poetry](https://python-poetry.org/).
