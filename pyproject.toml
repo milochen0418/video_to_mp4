@@ -7,8 +7,10 @@ readme = "plan.md"
 packages = [{ include = "video_to_mp4" }]
 
 [tool.poetry.dependencies]
-python = "==3.11.*"
-reflex = "0.8.24.post1"
+# 3.11 floor: Reflex 0.10 and the re_ddns smart-launcher image (python:3.11).
+# <3.16 cap: verified up to 3.15.
+python = ">=3.11,<3.16"
+reflex = "0.10.0"
 ffmpeg-python = "*"
 
 [build-system]

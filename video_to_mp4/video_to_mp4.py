@@ -34,7 +34,6 @@ def index() -> rx.Component:
 
 
 app = rx.App(
-    theme=rx.theme(appearance="light"),
     stylesheets=[
         "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
     ],

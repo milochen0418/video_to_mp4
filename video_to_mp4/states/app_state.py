@@ -88,22 +88,19 @@ class AppState(rx.State):
         for file in files:
             filename = "unknown"
             try:
-                filename, upload_data = await self._read_upload_file(file)
-                base_name = Path(filename).stem
-                ext = Path(filename).suffix.lower()
-                if ext[1:] not in self.allowed_extensions:
+                filename, unique_filename, size = await self._save_upload_file(
+                    file, upload_dir
+                )
+                if unique_filename is None:
+                    ext = Path(filename).suffix.lower()
                     errors.append(f"{filename}: Invalid file type {ext}")
                     continue
-                unique_filename = f"{base_name}_{random.randint(1000, 9999)}{ext}"
-                file_path = upload_dir / unique_filename
-                with open(file_path, "wb") as f:
-                    f.write(upload_data)
                 self.pending_files.append(filename)
                 self.staged_files.append(
                     {
                         "original_name": filename,
                         "stored_name": unique_filename,
-                        "size": len(upload_data),
+                        "size": size,
                     }
                 )
             except Exception as e:
@@ -197,6 +194,35 @@ class AppState(rx.State):
                 return f"{size_bytes:.1f} {unit}"
             size_bytes /= 1024.0
         return f"{size_bytes:.1f} PB"
+
+    async def _save_upload_file(
+        self, file, upload_dir: Path
+    ) -> tuple[str, Optional[str], int]:
+        """Store one upload in upload_dir under a unique name.
+
+        Returns (original filename, stored filename, size in bytes). The stored
+        filename is None when the extension is not allowed; nothing is written.
+        """
+        upload_data = None
+        if hasattr(file, "read"):
+            filename = getattr(file, "name", "unknown")
+        else:
+            filename, upload_data = await self._read_upload_file(file)
+        ext = Path(filename).suffix.lower()
+        if ext[1:] not in self.allowed_extensions:
+            return filename, None, 0
+        unique_filename = f"{Path(filename).stem}_{random.randint(1000, 9999)}{ext}"
+        size = 0
+        with open(upload_dir / unique_filename, "wb") as f:
+            if upload_data is not None:
+                f.write(upload_data)
+                size = len(upload_data)
+            else:
+                # Copy in 1 MB chunks so a large video never sits in memory whole.
+                while chunk := await file.read(1024 * 1024):
+                    f.write(chunk)
+                    size += len(chunk)
+        return filename, unique_filename, size
 
     async def _read_upload_file(self, file) -> tuple[str, bytes]:
         logging.error(
@@ -325,17 +351,13 @@ class AppState(rx.State):
         for file in files:
             filename = "unknown"
             try:
-                filename, upload_data = await self._read_upload_file(file)
-                base_name = Path(filename).stem
-                ext = Path(filename).suffix.lower()
-                if ext[1:] not in self.allowed_extensions:
+                filename, unique_filename, file_size = await self._save_upload_file(
+                    file, upload_dir
+                )
+                if unique_filename is None:
+                    ext = Path(filename).suffix.lower()
                     errors.append(f"{filename}: Invalid file type {ext}")
                     continue
-                unique_filename = f"{base_name}_{random.randint(1000, 9999)}{ext}"
-                file_path = upload_dir / unique_filename
-                file_size = len(upload_data)
-                with open(file_path, "wb") as f:
-                    f.write(upload_data)
                 job_id = f"job_{random.randint(10000, 99999)}"
                 new_job: FileJob = {
                     "id": job_id,
